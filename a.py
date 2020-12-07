@@ -28,13 +28,13 @@ model = FasterRCNN(backbone,
                    box_score_thresh=0.95)
 device = torch.device('cpu')
 model.load_state_dict(torch.load(
-    '/home/dung/AI/FRCNN/2.pth'))
+    '/home/dung/Project/AI/3.pth'))
 model.to(device)
 model.eval()
 extract = model.backbone
 
 # dung
-img = cv2.imread('/home/dung/AI/WIDER_train/13.jpg')[  171:440, 309:583   , :]
+img = cv2.imread('2.jpg')[171:440, 309:583, :]
 
 # img = cv2.imread('/home/dung/AI/WIDER_train/12.jpg')[  226:508,397: 647  , :]
 # img = cv2.imread('/home/dung/AI/WIDER_train/10.jpg')[ 102:450, 328:555 , :]

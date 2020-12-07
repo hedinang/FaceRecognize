@@ -1,3 +1,5 @@
+import io
+import sqlite3
 import cv2
 import torch
 import torchvision
@@ -27,12 +29,12 @@ model = FasterRCNN(backbone,
 print(model)
 device = torch.device('cpu')
 model.load_state_dict(torch.load(
-    '/home/dung/AI/FRCNN/2.pth'))
+    '/home/dung/Project/AI/3.pth'))
 model.to(device)
 model.eval()
 extract = model.backbone
 # 483 669 591 827
-img = cv2.imread('/home/dung/AI/WIDER_train/9.jpg')[134:434, 350:558, :]
+img = cv2.imread('2.jpg')[148:471, 323:555, :]
 img = cv2.resize(img, (224, 224))/255
 transform = torchvision.transforms.Compose([
     # torchvision.transforms.Resize((224, 224)),
@@ -44,15 +46,14 @@ img = torch.unsqueeze(img, 0)
 img = img.permute(0, 3, 1, 2)
 output = extract(img.to(device))
 x = output.detach().numpy()
-import sqlite3
-import numpy as np
-import io
+
 
 def adapt_array(arr):
     out = io.BytesIO()
     np.save(out, arr)
     out.seek(0)
     return sqlite3.Binary(out.read())
+
 
 def convert_array(text):
     out = io.BytesIO(text)

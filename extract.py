@@ -29,12 +29,12 @@ model = FasterRCNN(backbone,
 print(model)
 device = torch.device('cpu')
 model.load_state_dict(torch.load(
-    '/home/dung/Project/AI/3.pth'))
+    '3.pth'))
 model.to(device)
 model.eval()
 extract = model.backbone
 # 483 669 591 827
-img = cv2.imread('2.jpg')[148:471, 323:555, :]
+img = cv2.imread('2.jpg')[137:470, 327: 548, :]
 img = cv2.resize(img, (224, 224))/255
 transform = torchvision.transforms.Compose([
     # torchvision.transforms.Resize((224, 224)),

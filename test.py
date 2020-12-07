@@ -29,7 +29,7 @@ class Detect:
                                 box_score_thresh=0.95)
         self.device = torch.device('cpu')
         self.model.load_state_dict(torch.load(
-            '/home/dung/Project/AI/3.pth'))
+            '3.pth'))
         self.model.to(self.device)
         self.model.eval()
 

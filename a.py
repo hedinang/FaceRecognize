@@ -28,7 +28,7 @@ model = FasterRCNN(backbone,
                    box_score_thresh=0.95)
 device = torch.device('cpu')
 model.load_state_dict(torch.load(
-    '/home/dung/Project/AI/3.pth'))
+    '3.pth'))
 model.to(device)
 model.eval()
 extract = model.backbone

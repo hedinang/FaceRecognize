@@ -56,6 +56,6 @@ class Detect:
         return result
 
 
-img = cv2.imread('2.jpg')
+img = cv2.imread('5.jpg')
 detect = Detect()
 ds = detect.forward(img)

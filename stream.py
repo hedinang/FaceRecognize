@@ -86,10 +86,10 @@ fontScale = 1
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
 url = 'rtsp://192.168.1.122:5554'
 cap = cv2.VideoCapture(url)
-frame_width = int(cap.get(3)) 
-frame_height = int(cap.get(4)) 
-   
-size = (frame_width, frame_height) 
+frame_width = int(cap.get(3))
+frame_height = int(cap.get(4))
+
+size = (frame_width, frame_height)
 result = cv2.VideoWriter('filename.avi',
                          cv2.VideoWriter_fourcc(*'MJPG'),
                          10, size)
@@ -112,17 +112,19 @@ while(True):
             name = None
             box = []
             for data in datas:
-                dis = torch.nn.MSELoss()(output, torch.tensor(
-                    data, dtype=torch.float32).to(torch.device('cuda')))
+                dis=  np.linalg.norm(output.detach().cpu().numpy() - data, axis=1)
+                data = torch.tensor(
+                    data, dtype=torch.float32).to(torch.device('cuda'))
+                dis = torch.nn.MSELoss()(output, data)
                 if dis < 0.4 and dis < dis_tmp:
                     name = 'dung'
             if name != None:
                 cv2.rectangle(frame, (x0, y0), (x1, y1), (100, 200, 120), 1)
                 cv2.putText(frame, name, (x0, y0), cv2.FONT_HERSHEY_SIMPLEX, fontScale,
                             color, thickness, cv2.LINE_AA)
-        result.write(frame) 
+        result.write(frame)
         cv2.imshow('frame', frame)
-        
+
     q = cv2.waitKey(1)
     if q == ord("q"):
         break

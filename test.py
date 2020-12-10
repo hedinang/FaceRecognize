@@ -8,6 +8,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection import FasterRCNN
 import numpy as np
 
+import torch.nn as nn
 
 class Detect:
     def __init__(self):

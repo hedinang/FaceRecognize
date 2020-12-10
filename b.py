@@ -9,8 +9,8 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection import FasterRCNN
 import numpy as np
 import sqlite3
-
-
+# import face_recognition
+# results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
 class Detect:
     def __init__(self):
         super().__init__()

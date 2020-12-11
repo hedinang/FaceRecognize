@@ -30,7 +30,7 @@ class Detect:
                                 box_score_thresh=0.95)
         self.device = torch.device('cpu')
         self.model.load_state_dict(torch.load(
-            '3.pth'))
+            '/home/dung/Project/AI/3.pth'))
         self.model.to(self.device)
         self.model.eval()
 
@@ -57,6 +57,6 @@ class Detect:
         return result
 
 
-img = cv2.imread('5.jpg')
+img = cv2.imread('8.jpg')
 detect = Detect()
 ds = detect.forward(img)

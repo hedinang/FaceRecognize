@@ -12,6 +12,8 @@ import numpy as np
 import torch.nn as nn
 
 from PIL import Image
+
+
 class Vgg_face_dag(nn.Module):
 
     def __init__(self):
@@ -152,11 +154,11 @@ model = FasterRCNN(backbone,
 
 model = Vgg_face_dag()
 model.eval()
-state_dict = torch.load('/home/dung/AI/a')
+state_dict = torch.load('/home/dung/Project/AI/a.pth')
 model.load_state_dict(state_dict)
 device = torch.device('cuda')
-# img = cv2.imread('2.jpg')[137:470, 327: 548, :]
-img = cv2.imread('5.jpg')[40:132, 210:270, :]
+img = cv2.imread('8.jpg')[391:928, 191:580, :]
+# img = cv2.imread('5.jpg')[40:132, 210:270, :]
 img = cv2.resize(img, (224, 224))/255
 transform = torchvision.transforms.Compose([
     # torchvision.transforms.Resize((224, 224)),
@@ -190,10 +192,12 @@ sqlite3.register_adapter(np.ndarray, adapt_array)
 sqlite3.register_converter("array", convert_array)
 con = sqlite3.connect('example.db', detect_types=sqlite3.PARSE_DECLTYPES)
 cur = con.cursor()
-cur.execute("create table test (arr array)")
-cur.execute("insert into test (arr) values (?)", (x, ))
+# cur.execute("create table test (feature array, name text)")
+# sql_delete_query = 'delete from test where name = "hung"'
+# cur.execute(sql_delete_query)
+cur.execute("insert into test (feature, name) values (?,?)", (x, 'bau'))
 con.commit()
-cur.execute("select arr from test")
-data = cur.fetchone()[0]
+cur.execute("select * from test")
+rows = cur.fetchall()
 con.close()
 print('aaa')

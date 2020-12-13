@@ -1,5 +1,5 @@
 import io
-import sqlite3
+import mysql.connector
 import cv2
 import torch
 import torchvision
@@ -12,6 +12,14 @@ import numpy as np
 import torch.nn as nn
 
 from PIL import Image
+
+
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="password",
+    database="face"
+)
 
 
 class Vgg_face_dag(nn.Module):
@@ -78,7 +86,7 @@ class Vgg_face_dag(nn.Module):
         self.dropout7 = nn.Dropout(p=0.5)
         self.fc8 = nn.Linear(in_features=4096, out_features=2622, bias=True)
 
-    def forward_once(self, x0):
+    def forward(self, x0):
         x1 = self.conv1_1(x0)
         x2 = self.relu1_1(x1)
         x3 = self.conv1_2(x2)
@@ -120,7 +128,7 @@ class Vgg_face_dag(nn.Module):
         x38 = self.fc8(x37)
         return x38
 
-    def forward(self, input1, input2):
+    def forward_two(self, input1, input2):
         output1 = self.forward_once(input1)
         output2 = self.forward_once(input2)
 
@@ -144,22 +152,13 @@ model = FasterRCNN(backbone,
                    rpn_anchor_generator=anchor_generator,
                    box_roi_pool=roi_pooler,
                    box_score_thresh=0.95)
-# print(model)
-# device = torch.device('cpu')
-# model.load_state_dict(torch.load(
-#     '3.pth'))
-# model.to(device)
-# model.eval()
-# extract = model.backbone
-
-model = Vgg_face_dag()
-model.eval()
-state_dict = torch.load('/home/dung/Project/AI/a.pth')
-model.load_state_dict(state_dict)
 device = torch.device('cuda')
-img = cv2.imread('8.jpg')[391:928, 191:580, :]
+model = Vgg_face_dag()
+model.to(device)
+model.load_state_dict(torch.load('/home/dung/Project/AI/a.pth'))
+# img = cv2.imread('8.jpg')[391:928, 191:580, :]
 # img = cv2.imread('5.jpg')[40:132, 210:270, :]
-img = cv2.resize(img, (224, 224))/255
+# img = cv2.resize(img, (224, 224))/255
 transform = torchvision.transforms.Compose([
     # torchvision.transforms.Resize((224, 224)),
     torchvision.transforms.ToTensor(),

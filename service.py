@@ -1,17 +1,18 @@
+import io
+import mysql.connector
 import cv2
 import torch
 import torchvision
 import os
-import io
 import math
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection import FasterRCNN
 import numpy as np
-import mysql.connector
 import torch.nn as nn
-from vidgear.gears import WriteGear
-device = torch.device('cuda')
+from datetime import datetime
+from detect import Detect
+from torchvision import transforms
 
 
 class Vgg_face_dag(nn.Module):
@@ -70,16 +71,13 @@ class Vgg_face_dag(nn.Module):
         self.relu5_3 = nn.ReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(kernel_size=[2, 2], stride=[
                                   2, 2], padding=0, dilation=1, ceil_mode=False)
-        self.fc6 = nn.Linear(
-            in_features=25088, out_features=4096, bias=True)
+        self.fc6 = nn.Linear(in_features=25088, out_features=4096, bias=True)
         self.relu6 = nn.ReLU(inplace=True)
         self.dropout6 = nn.Dropout(p=0.5)
-        self.fc7 = nn.Linear(
-            in_features=4096, out_features=4096, bias=True)
+        self.fc7 = nn.Linear(in_features=4096, out_features=4096, bias=True)
         self.relu7 = nn.ReLU(inplace=True)
         self.dropout7 = nn.Dropout(p=0.5)
-        self.fc8 = nn.Linear(
-            in_features=4096, out_features=2622, bias=True)
+        self.fc8 = nn.Linear(in_features=4096, out_features=2622, bias=True)
 
     def forward(self, x0):
         x1 = self.conv1_1(x0)
@@ -113,10 +111,8 @@ class Vgg_face_dag(nn.Module):
         x29 = self.conv5_3(x28)
         x30 = self.relu5_3(x29)
         x31_preflatten = self.pool5(x30)
-        # x31 = x31_preflatten.view(x31_preflatten.size(0), -1)
         x31 = x31_preflatten.reshape(-1)
         x31 = torch.unsqueeze(x31, 0)
-
         x32 = self.fc6(x31)
         x33 = self.relu6(x32)
         x34 = self.dropout6(x33)
@@ -126,129 +122,85 @@ class Vgg_face_dag(nn.Module):
         x38 = self.fc8(x37)
         return x38
 
-    def forward_two(self, input1, input2):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
 
-        #euclidean_distance = F.pairwise_distance(output1, output2, keepdim = True)
-        difference = output1 - output2
-        return difference
+device = torch.device('cuda')
+model = Vgg_face_dag()
+model.to(device)
+model.load_state_dict(torch.load('/home/dung/AI/a'))
 
-
-class Detect:
-    def __init__(self):
-        super().__init__()
-        backbone = torchvision.models.vgg16(pretrained=False).features
-        backbone.out_channels = 512
-        anchor_sizes = ((8, 16, 32, 64, 128, 256, 512),)
-        aspect_ratios = ((1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/math.sqrt(2), 1,
-                          2, math.sqrt(2), 3, 4, 5, 6, 7, 8),)
-        anchor_generator = AnchorGenerator(
-            sizes=anchor_sizes, aspect_ratios=aspect_ratios)
-        roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0', '1', '2', '3', '4'],
-                                                        output_size=7,
-                                                        sampling_ratio=2)
-        self.model = FasterRCNN(backbone,
-                                num_classes=2,
-                                rpn_anchor_generator=anchor_generator,
-                                box_roi_pool=roi_pooler,
-                                box_score_thresh=0.95)
-        self.device = torch.device('cuda')
-        self.model.load_state_dict(torch.load('3.pth'))
-        self.model.to(self.device)
-        self.model.eval()
-
-    def forward(self, frame):
-        fontScale = 1
-        color = (255, 0, 0)
-        thickness = 1
-        im = frame
-        frame = torch.tensor(frame, dtype=torch.float32)/255
-        frame = frame.permute((2, 0, 1))
-        output = self.model([frame.to(self.device)])
-        boxes = output[0]['boxes'].detach().cpu().numpy()
-        labels = output[0]['labels'].detach().cpu().numpy()
-        scores = output[0]['scores'].detach().cpu().numpy()
-        result = []
-        for i, box in enumerate(boxes):
-            x0, y0, x1, y1 = box
-            x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
-            result.append((x0, y0, x1, y1))
-
-        return result
-
-
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="password",
-    database="face"
-)
-cursor = db.cursor()
-cursor.execute(
-    "select feature, name from person where del_flag = 0 and active = 1")
-datas = cursor.fetchall()
 
 detect = Detect()
-extract = Vgg_face_dag()
-state_dict = torch.load('/home/dung/AI/a')
-extract.load_state_dict(state_dict)
-extract.to(device)
-color = (255, 255, 255)
-thickness = 1
-fontScale = 1
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
-url = 'rtsp://192.168.1.122:5554'
-cap = cv2.VideoCapture(url)
-cap.set(cv2.CAP_PROP_FPS, 15)
-output_params = {"-vcodec": "libx264", "-crf": 0, "-preset": "fast"}
-frame_width = int(cap.get(3))
-frame_height = int(cap.get(4))
 
-size = (frame_width, frame_height)
-result = cv2.VideoWriter('filename.avi',
-                         cv2.VideoWriter_fourcc(*'MJPG'),
-                         10, size)
 
-writer = WriteGear(output_filename='test/output.m3u8', compression_mode=True, logging=True,
-                   **output_params)  # Define writer with output filename 'Output.mp4'
-while(True):
-    ret, frame = cap.read()
-    if frame is not None:
-        ds = detect.forward(frame)
+class Person:
+    def __init__(self):
+        self.db = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="password",
+            database="face"
+        )
+        self.cursor = self.db.cursor()
+        self.id = None
+        self.name = None
+        self.img = None
+        self.feature = None
+        self.active = None
+        self.del_flag = None
 
-        for box in ds:
-            x0, y0, x1, y1 = box
-            im = cv2.resize(frame[y0:y1, x0:x1, ], (224, 224))/255
-            im = torch.tensor(im, dtype=torch.float32)
-            im = torch.unsqueeze(im, 0)
-            im = im.permute(0, 3, 1, 2)
+    def create(self, name):
+        self.cursor.execute(
+            'insert into person (name, active, del_flag) values (%s,%s,%s)', (name, 0, 0))
+        self.db.commit()
+        self.cursor.execute(
+            f'select * from person where id = {self.cursor.lastrowid}')
+        result = self.cursor.fetchone()
+        self.cursor.close()
+        self.db.close()
+        response = {}
+        response['id'] = result[0]
+        response['name'] = result[1]
+        response['img'] = result[2]
+        response['feature'] = result[3]
+        response['active'] = result[4]
+        response['del_flag'] = result[5]
+        return response
 
-            output = extract(im.to(device))
-            dis_tmp = 0
-            name = 'undefined'
-            box = []
-            for data in datas:
-                feature = np.frombuffer(data[0], dtype=np.float32)
-                feature = torch.tensor(feature, dtype=torch.float32)
-                feature = torch.unsqueeze(feature, 0).to(device)
-                similarity = nn.CosineSimilarity(
-                    dim=1, eps=1e-6)(feature, output.to(device))
-                if similarity > 0.8 and similarity > dis_tmp:
-                    dis_tmp = similarity
-                    name = data[1]
+    def extract(self, file_dir):
+        img = cv2.imread(file_dir)
+        face = detect.forward(img)
+        face = torch.tensor(face, dtype=torch.float32)
+        face = torch.unsqueeze(face, 0)
+        face = face.permute(0, 3, 1, 2).to(device)
+        output = model(face)
+        return output.detach().cpu().numpy().tostring()
 
-            cv2.rectangle(frame, (x0, y0), (x1, y1), (0, 0, 255), 1)
-            cv2.putText(frame, name, (x0, y0), cv2.FONT_HERSHEY_SIMPLEX, fontScale,
-                        color, thickness, cv2.LINE_AA)
+    def update(self, id, name_replace=None, im=None):
+        self.cursor.execute(
+            f'select * from person where id = {id} and del_flag = 0')
+        record = self.cursor.fetchone()
+        timestamp = datetime.now().timestamp()
+        name = record[1]
+        img = record[2]
+        feature = record[3]
+        active = record[4]
+        if name_replace != None:
+            name = name_replace
+        if im != None:
+            img = f'image/{id}_{timestamp}.jpg'
+            im.save(img)
+            feature = self.extract(img)
+            active = 1
+        sql = f'update person set name = %s, img = %s, feature = %s, active = %s where id = %s'
+        self.cursor.execute(sql, (name, img, feature, active, id))
+        self.db.commit()
+        self.cursor.close()
+        self.db.close()
 
-        # writer.write(frame)
-        result.write(frame)
-        cv2.imshow('frame', frame)
 
-    q = cv2.waitKey(1)
-    if q == ord("q"):
-        break
-cv2.destroyAllWindows()
-cap.release()
-writer.close()
+class Recognize:
+    def __init__(self):
+        pass
+
+    def process(self):
+        pass

@@ -4,3 +4,5 @@
 *.zip
 *db
 test
+image
+__pycache__

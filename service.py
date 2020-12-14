@@ -126,7 +126,7 @@ class Vgg_face_dag(nn.Module):
 device = torch.device('cuda')
 model = Vgg_face_dag()
 model.to(device)
-model.load_state_dict(torch.load('/home/dung/AI/a'))
+model.load_state_dict(torch.load('/home/dung/Project/AI/a.pth'))
 
 
 detect = Detect()
@@ -141,13 +141,6 @@ class Person:
             database="face"
         )
         self.cursor = self.db.cursor()
-        self.id = None
-        self.name = None
-        self.img = None
-        self.feature = None
-        self.active = None
-        self.del_flag = None
-
     def create(self, name):
         self.cursor.execute(
             'insert into person (name, active, del_flag) values (%s,%s,%s)', (name, 0, 0))

@@ -11,7 +11,7 @@ from torchvision import transforms
 import torch.nn as nn
 
 
-class Detect:
+class Detect(nn.Module):
     def __init__(self):
         super().__init__()
         backbone = torchvision.models.vgg16(pretrained=False).features
@@ -30,7 +30,7 @@ class Detect:
                                 box_roi_pool=roi_pooler,
                                 box_score_thresh=0.95)
         self.device = torch.device('cuda')
-        self.model.load_state_dict(torch.load('3.pth'))
+        self.model.load_state_dict(torch.load('/home/dung/Project/AI/3.pth'))
         self.model.to(self.device)
         self.model.eval()
 
@@ -48,10 +48,3 @@ class Detect:
             x0, y0, x1, y1 = boxes[0]
             x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
             return cv2.resize(im[y0:y1, x0:x1, :], (224, 224))/255
-
-
-# im = cv2.imread('2.jpg')
-# im = torch.tensor(im, dtype=torch.float32)
-# im = im.permute((2, 0, 1))
-# result = transforms.Resize(224)(im)
-# print('aaa')

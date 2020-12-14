@@ -11,6 +11,8 @@ import numpy as np
 import mysql.connector
 import torch.nn as nn
 from vidgear.gears import WriteGear
+from torch.nn import PairwiseDistance
+
 device = torch.device('cuda')
 
 
@@ -154,7 +156,7 @@ class Detect:
                                 box_roi_pool=roi_pooler,
                                 box_score_thresh=0.95)
         self.device = torch.device('cuda')
-        self.model.load_state_dict(torch.load('3.pth'))
+        self.model.load_state_dict(torch.load('/home/dung/Project/AI/3.pth'))
         self.model.to(self.device)
         self.model.eval()
 
@@ -178,27 +180,32 @@ class Detect:
         return result
 
 
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="password",
-    database="face"
-)
-cursor = db.cursor()
-cursor.execute(
-    "select feature, name from person where del_flag = 0 and active = 1")
-datas = cursor.fetchall()
+def select():
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="password",
+        database="face"
+    )
+    cursor = db.cursor()
+    cursor.execute(
+        "select feature, name from person where del_flag = 0 and active = 1")
+    rows = cursor.fetchall()
+    cursor.close()
+    db.close()
+    return rows
+
 
 detect = Detect()
 extract = Vgg_face_dag()
-state_dict = torch.load('/home/dung/AI/a')
+state_dict = torch.load('/home/dung/Project/AI/a.pth')
 extract.load_state_dict(state_dict)
 extract.to(device)
 color = (255, 255, 255)
 thickness = 1
 fontScale = 1
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
-url = 'rtsp://192.168.1.122:5554'
+url = 'rtsp://192.168.1.155:5554'
 cap = cv2.VideoCapture(url)
 cap.set(cv2.CAP_PROP_FPS, 15)
 output_params = {"-vcodec": "libx264", "-crf": 0, "-preset": "fast"}
@@ -228,13 +235,13 @@ while(True):
             dis_tmp = 0
             name = 'undefined'
             box = []
-            for data in datas:
+            for data in select():
                 feature = np.frombuffer(data[0], dtype=np.float32)
                 feature = torch.tensor(feature, dtype=torch.float32)
                 feature = torch.unsqueeze(feature, 0).to(device)
                 similarity = nn.CosineSimilarity(
                     dim=1, eps=1e-6)(feature, output.to(device))
-                if similarity > 0.8 and similarity > dis_tmp:
+                if similarity > 0.7 and similarity > dis_tmp:
                     dis_tmp = similarity
                     name = data[1]
 

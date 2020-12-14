@@ -30,7 +30,7 @@ class Detect(nn.Module):
                                 box_roi_pool=roi_pooler,
                                 box_score_thresh=0.95)
         self.device = torch.device('cuda')
-        self.model.load_state_dict(torch.load('/home/dung/Project/AI/3.pth'))
+        self.model.load_state_dict(torch.load('3.pth'))
         self.model.to(self.device)
         self.model.eval()
 

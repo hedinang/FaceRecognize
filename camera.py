@@ -13,6 +13,7 @@ import torch.nn as nn
 from datetime import datetime
 from torchvision import transforms
 from detect import Detect
+import random
 device = torch.device('cuda')
 
 
@@ -22,34 +23,37 @@ class VggFace(nn.Module):
         self.vgg = torchvision.models.vgg16()
         self.vgg.classifier[6] = torch.nn.Linear(
             in_features=4096, out_features=2622, bias=True)
-        self.linear1 = nn.Linear(in_features=5244, out_features=100, bias=True)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.dropout1 = nn.Dropout(p=0.5, inplace=False)
-        self.linear2 = nn.Linear(in_features=100, out_features=1, bias=True)
-        self.sigmoid1 = nn.Sigmoid()
-        self.loss = nn.BCELoss()
+        # self.linear1 = nn.Linear(in_features=5244, out_features=100, bias=True)
+        # self.relu1 = nn.ReLU(inplace=True)
+        # self.dropout1 = nn.Dropout(p=0.5, inplace=False)
+        # self.linear2 = nn.Linear(in_features=100, out_features=1, bias=True)
+        # self.sigmoid1 = nn.Sigmoid()
+        self.loss = nn.TripletMarginLoss()
 
-    def forward(self, input1, input2, classname):
-        output1 = self.vgg(input1)
-        output2 = self.vgg(input2)
-        target = torch.cat([output1, output2], dim=1)
-        target = self.linear1(target)
-        target = self.relu1(target)
-        target = self.dropout1(target)
-        target = self.linear2(target)
-        target = self.sigmoid1(target)
-        target = target.view(-1)
-        if classname == 0:
-            loss = self.loss(target, torch.FloatTensor(
-                target.shape[0]).fill_(0).to(device))
-        else:
-            loss = self.loss(target, torch.FloatTensor(
-                target.shape[0]).fill_(1).to(device))
+    def forward(self, anchor, positive, negative):
+        anchor = self.vgg(anchor)
+        positive = self.vgg(positive)
+        negative = self.vgg(negative)
+        loss = self.loss(anchor, positive, negative)
         return loss
+        # target = torch.cat([output1, output2], dim=1)
+        # target = self.linear1(target)
+        # target = self.relu1(target)
+        # target = self.dropout1(target)
+        # target = self.linear2(target)
+        # target = self.sigmoid1(target)
+        # target = target.view(-1)
+        # if classname == 0:
+        #     loss = self.loss(target, torch.FloatTensor(
+        #         target.shape[0]).fill_(0).to(device))
+        # else:
+        #     loss = self.loss(target, torch.FloatTensor(
+        #         target.shape[0]).fill_(1).to(device))
+        # return loss
 
 
 class FaceDataset(torch.utils.data.Dataset):
-    def __init__(self, root='/home/dung/Project/AI/train-faces'):
+    def __init__(self, root='/home/dung/AI/train-faces'):
         self.folder = []
         heads = os.listdir(root)
         for i, head in enumerate(heads[:100]):
@@ -71,13 +75,13 @@ class FaceDataset(torch.utils.data.Dataset):
             ims.append(im)
         imgs = torch.tensor(ims, dtype=torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)
-        input = imgs[0]
-        output = imgs[1:]
-        return input, output
+        anchor = imgs[0]
+        positive = imgs[1:]
+        return anchor, positive
 
 
 class DifferenceDataset(torch.utils.data.Dataset):
-    def __init__(self, not_idx=None, root='/home/dung/Project/AI/train-faces'):
+    def __init__(self, not_idx=None, root='/home/dung/AI/train-faces'):
         self.folder = []
         heads = os.listdir(root)
         for i, head in enumerate(heads[:100]):
@@ -94,21 +98,19 @@ class DifferenceDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         imgs = os.listdir(self.folder[idx])
-        ims = []
-        for img in imgs:
-            im = cv2.imread(f'{self.folder[idx]}/{img}')
-            im = cv2.resize(im, (224, 224))/225
-            ims.append(im)
-        imgs = torch.tensor(ims, dtype=torch.float32)
-        imgs = imgs.permute(0, 3, 1, 2)
-        return imgs
+        random_int = random.randint(0, len(imgs))
+        img = cv2.imread(f'{self.folder[idx]}/{imgs[random_int]}')
+        img = cv2.resize(img, (224, 224))/225
+        img = torch.tensor(img, dtype=torch.float32)
+        img = img.permute(2, 0, 1)
+        return img
 
 
 detect = Detect()
 model = VggFace()
 model.to(device)
 model.train()
-# model.load_state_dict(torch.load('recognize_2.pth'))
+# model.load_state_dict(torch.load('recognize_1.pth'))
 # loss = model(i1.to(device), i2.to(device))
 # i1 = cv2.imread('2.jpg')
 # i2 = cv2.imread('3.jpg')
@@ -120,7 +122,7 @@ model.train()
 # i2 = i2.permute(2, 0, 1).to(device)
 # i1 = torch.unsqueeze(i1, 0)
 # i2 = torch.unsqueeze(i2, 0)
-# loss = model(i1, i2)
+# loss = model(i1, i2,0)
 
 dataset = FaceDataset()
 data_loader = torch.utils.data.DataLoader(
@@ -131,21 +133,20 @@ epochs = 1000
 for epoch in range(epochs):
     print(f'epoch {epoch} running')
     loss = None
-    for i, (input, output) in enumerate(data_loader):
+    for i, (anchor, positive) in enumerate(data_loader):
 
-        loss = model(input.repeat(
-            output.shape[1], 1, 1, 1).to(device), output[0].to(device), 0)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        # loss = model(anchor.repeat(positive.shape[1], 1, 1, 1).to(
+        #     device), positive[0].to(device), 0)
         difference = DifferenceDataset(not_idx=i)
         difference_loader = torch.utils.data.DataLoader(
-            difference, batch_size=1, shuffle=False, num_workers=0)
-        for i, diff in enumerate(difference_loader):
-            loss = model(input.repeat(diff.shape[1], 1, 1, 1).to(
-                device), diff[0].to(device), 1)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            difference, batch_size=positive[0], shuffle=True, num_workers=0)
+        diff  = next(difference_loader
+         )))
+        
+            # loss = model(input.repeat(diff.shape[1], 1, 1, 1).to(
+            #     device), diff[0].to(device), 1)
+            # optimizer.zero_grad()
+            # loss.backward()
+            # optimizer.step()
         print(f'loss = {loss}')
-        torch.save(model.state_dict(), 'recognize_1.pth')
+        torch.save(model.state_dict(), 'recognize_2.pth')

@@ -98,7 +98,7 @@ class DifferenceDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         imgs = os.listdir(self.folder[idx])
-        random_int = random.randint(0, len(imgs))
+        random_int = random.randint(0, len(imgs)-1)
         img = cv2.imread(f'{self.folder[idx]}/{imgs[random_int]}')
         img = cv2.resize(img, (224, 224))/225
         img = torch.tensor(img, dtype=torch.float32)
@@ -139,14 +139,15 @@ for epoch in range(epochs):
         #     device), positive[0].to(device), 0)
         difference = DifferenceDataset(not_idx=i)
         difference_loader = torch.utils.data.DataLoader(
-            difference, batch_size=positive[0], shuffle=True, num_workers=0)
-        diff  = next(difference_loader
-         )))
+            difference, batch_size= positive.shape[1], shuffle=True, num_workers=0)
+        diff=    iter(difference_loader)
+        negative  = next(diff)
         
-            # loss = model(input.repeat(diff.shape[1], 1, 1, 1).to(
-            #     device), diff[0].to(device), 1)
-            # optimizer.zero_grad()
-            # loss.backward()
-            # optimizer.step()
+        
+        loss =  model(anchor.repeat(positive.shape[1], 1, 1, 1).to(
+             device), positive[0].to(device), negative.to(device))
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
         print(f'loss = {loss}')
-        torch.save(model.state_dict(), 'recognize_2.pth')
+    torch.save(model.state_dict(), 'recognize_2.pth')
